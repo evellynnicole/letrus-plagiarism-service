@@ -26,7 +26,7 @@ class Retriever:
         return list(self.enc.embed([query]))[0].tolist()
 
     def search_dense_only(self, query: str, top_k: int = 3) -> List[Dict[str, Any]]:
-        """Busca apenas no índice denso."""
+        """Busca apenas no índice denso. Retorna score = cosine (da própria coleção)."""
         q_vec = self.encode_query(query)
         res = self.client.query_points(
             collection_name=self.config.qdrant_collection_dense,
@@ -39,7 +39,7 @@ class Retriever:
         return [
             {
                 "id": p.id,
-                "score": p.score,
+                "similarity": p.score,
                 "text": (p.payload or {}).get("text"),
             }
             for p in res.points
@@ -52,7 +52,12 @@ class Retriever:
         candidates_dense: int = 10,
         candidates_sparse: int = 10,
     ) -> List[Dict[str, Any]]:
-        """Busca híbrida combinando dense e sparse"""
+        """
+        Híbrido: combina dense+sparse via RRF para ORDENAR.
+        Depois, roda uma segunda consulta rápida filtrando pelos IDs retornados
+        para obter o cosine oficial do Qdrant. O campo `score` abaixo é SEMPRE
+        a similaridade de cosseno.
+        """
         q_vec = self.encode_query(query)
 
         dense_prefetch = models.Prefetch(
@@ -65,9 +70,9 @@ class Retriever:
             using=self.sparse_name,
             limit=candidates_sparse,
         )
-        fusion = models.FusionQuery(fusion=models.Fusion.RRF)
 
-        res = self.client.query_points(
+        fusion = models.FusionQuery(fusion=models.Fusion.RRF)
+        fused = self.client.query_points(
             collection_name=self.config.qdrant_collection_hybrid,
             prefetch=[dense_prefetch, sparse_prefetch],
             query=fusion,
@@ -76,11 +81,30 @@ class Retriever:
             with_vectors=False,
         )
 
-        return [
-            {
-                "id": p.id,
-                "score": p.score,
-                "text": (p.payload or {}).get("text"),
-            }
-            for p in res.points
-        ]
+        if not fused.points:
+            return []
+
+        ids = [p.id for p in fused.points]
+
+        dense_filtered = self.client.query_points(
+            collection_name=self.config.qdrant_collection_dense,
+            query=q_vec,
+            using=self.dense_name,
+            limit=len(ids),
+            with_payload=False,
+            with_vectors=False,
+            query_filter=models.Filter(must=[models.HasIdCondition(has_id=ids)]),
+        )
+
+        cos_by_id: Dict[Any, float] = {p.id: p.score for p in dense_filtered.points}
+
+        results: List[Dict[str, Any]] = []
+        for p in fused.points:
+            results.append(
+                {
+                    "id": p.id,
+                    "similarity": cos_by_id.get(p.id),
+                    "text": (p.payload or {}).get("text"),
+                }
+            )
+        return results

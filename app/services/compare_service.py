@@ -24,7 +24,12 @@ class CompareService:
     def compare_lexical(self, text: str, top_k: int) -> List[Dict[str, Any]]:
         ranked = self._tfidf.rank(text, top_k=top_k)
         return [
-            {"index": idx, "score": score, "text": self._corpus_texts[idx]} for idx, score in ranked
+            {
+                "index": idx,
+                "similarity": similarity,
+                "text": self._corpus_texts[idx]
+            }
+            for idx, similarity in ranked
         ]
 
     def compare_semantic(self, text: str, top_k: int) -> List[Dict[str, Any]]:

@@ -31,7 +31,7 @@ class CompareRequest(BaseModel):
 class MatchItem(BaseModel):
     id: Optional[str] = None
     index: Optional[int] = None
-    score: float
+    similarity: float
     text: str
 
 

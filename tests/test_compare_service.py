@@ -8,9 +8,9 @@ def mock_service():
     """Mock simples do CompareService"""
     service = Mock()
 
-    service.compare_lexical.return_value = [{"index": 0, "score": 0.9, "text": "teste"}]
-    service.compare_semantic.return_value = [{"id": "doc1", "score": 0.8, "text": "teste"}]
-    service.compare_hybrid.return_value = [{"id": "doc1", "score": 0.85, "text": "teste"}]
+    service.compare_lexical.return_value = [{"index": 0, "similarity": 0.9, "text": "teste"}]
+    service.compare_semantic.return_value = [{"id": "doc1", "similarity": 0.8, "text": "teste"}]
+    service.compare_hybrid.return_value = [{"id": "doc1", "similarity": 0.85, "text": "teste"}]
 
     def _compare_all(text, top_k=10):
         return {
@@ -27,7 +27,7 @@ def test_compare_lexical(mock_service):
     """Testa comparação lexical"""
     result = mock_service.compare_lexical("texto", top_k=3)
     assert len(result) == 1
-    assert result[0]["score"] == 0.9
+    assert result[0]["similarity"] == 0.9
 
 
 def test_compare_semantic(mock_service):
@@ -41,7 +41,7 @@ def test_compare_hybrid(mock_service):
     """Testa comparação híbrida"""
     result = mock_service.compare_hybrid("texto", top_k=3)
     assert len(result) == 1
-    assert result[0]["score"] == 0.85
+    assert result[0]["similarity"] == 0.85
 
 
 def test_compare_all_modes(mock_service):

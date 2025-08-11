@@ -18,8 +18,8 @@ def test_compare_request():
 
 def test_match_item():
     """Testa MatchItem básico"""
-    item = MatchItem(score=0.9, text="teste")
-    assert item.score == 0.9
+    item = MatchItem(similarity=0.9, text="teste")
+    assert item.similarity == 0.9
     assert item.text == "teste"
     assert item.id is None
 
@@ -28,9 +28,9 @@ def test_compare_response():
     """Testa response básico"""
     response = CompareResponse(
         mode="all",
-        lexical=[MatchItem(score=0.9, text="teste")],
-        semantic=[MatchItem(score=0.8, text="teste")],
-        hybrid=[MatchItem(score=0.85, text="teste")],
+        lexical=[MatchItem(similarity=0.9, text="teste")],
+        semantic=[MatchItem(similarity=0.8, text="teste")],
+        hybrid=[MatchItem(similarity=0.85, text="teste")],
     )
     assert response.mode == "all"
     assert len(response.lexical) == 1

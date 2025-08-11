@@ -4,23 +4,30 @@ Um serviço de detecção de plágio que combina abordagens léxicas e semântic
 
 ## Sobre o Projeto
 
-Este projeto implementa um sistema **completo de detecção de plágio** que oferece **todas as estratégias** de análise:
 
 - **Análise Léxica (TF-IDF)**: Identifica similaridades baseadas em palavras e frases exatas
 - **Análise Semântica (Embeddings)**: Captura similaridades de significado e contexto
 - **Busca Híbrida**: Combina ambas as abordagens para máxima precisão
 - **Modo Completo**: Permite executar todas as estratégias simultaneamente
 
-##  Arquitetura da Solução
 
 ### Por que Múltiplas Abordagens?
 
 A solução implementa **todas as estratégias** de detecção de plágio para cobrir todos os cenários possíveis:
 
 1. **Análise Léxica (TF-IDF)**: Detecta plágio direto, cópias literais e similaridades baseadas em palavras
-2. **Análise Semântica (Embeddings)**: Captura plágio parafraseado, reescrito e similaridades de significado
-3. **Busca Híbrida**: Combina ambas as abordagens para máxima precisão e cobertura
+2. **Análise Semântica (Embeddings)**: Captura plágio parafraseado, reescrito e similaridades de significado usando o modelo `sentence-transformers/all-MiniLM-L6-v2`
+3. **Busca Híbrida**: Combina embeddings densos (all-MiniLM-L6-v2) com BM25 (vetor esparso) para máxima precisão e cobertura
 4. **Modo "All"**: Permite comparar todas as estratégias simultaneamente
+
+### Como Funciona a Busca Híbrida
+
+A busca híbrida usa **RRF (Reciprocal Rank Fusion)** para combinar resultados de duas abordagens:
+
+1. **Fusão RRF**: Combina rankings de embeddings densos (semântica) + BM25 (léxica) para ordenar candidatos
+2. **Similaridade Final**: Refina os melhores candidatos obtendo o **score de cosseno oficial** do Qdrant
+
+**Resultado**: Cobertura completa (dense + sparse) com precisão garantida (sempre cosseno real).
 
 ### Componentes Principais
 
@@ -90,17 +97,6 @@ A escolha pelo **FastEmbed** foi baseada em:
 3. **Simplicidade**: API mais simples e direta
 4. **Compatibilidade**: Funciona bem com o Qdrant
 
-```python
-# Antes (sentence-transformers):
-from sentence_transformers import SentenceTransformer
-model = SentenceTransformer('all-MiniLM-L6-v2')
-embeddings = model.encode([text])
-
-# Agora (FastEmbed):
-from fastembed import TextEmbedding
-model = TextEmbedding('sentence-transformers/all-MiniLM-L6-v2')
-embeddings = list(model.embed([text]))
-```
 
 ## Uso da API
 
@@ -119,8 +115,8 @@ curl -X POST "http://localhost:8000/compare" \
 ### Modos de Comparação
 
 - **`lexical`**: Análise TF-IDF para plágio direto e cópias literais
-- **`semantic`**: Embeddings densos para plágio parafraseado e similaridades semânticas
-- **`hybrid`**: Combinação otimizada de ambas as abordagens
+- **`semantic`**: Embeddings densos (all-MiniLM-L6-v2) para plágio parafraseado e similaridades semânticas
+- **`hybrid`**: Combinação otimizada de embeddings densos (all-MiniLM-L6-v2) com BM25 (vetor esparso)
 - **`all`**: Executa todas as estratégias para cobertura completa
 
 ### Estrutura da Resposta
@@ -133,21 +129,21 @@ A API retorna um objeto `CompareResponse` com os seguintes campos:
   "lexical": [
     {
       "index": 42,
-      "score": 0.85,
+      "similarity": 0.85,
       "text": "Texto similar encontrado via TF-IDF"
     }
   ],
   "semantic": [
     {
       "id": "doc_123",
-      "score": 0.92,
+      "similarity": 0.92,
       "text": "Texto similar encontrado via embeddings"
     }
   ],
   "hybrid": [
     {
       "id": "doc_456",
-      "score": 0.95,
+      "similarity": 0.95,
       "text": "Texto similar encontrado via busca híbrida"
     }
   ]
@@ -157,7 +153,7 @@ A API retorna um objeto `CompareResponse` com os seguintes campos:
 **Campos de cada item:**
 - **`id`**: Identificador único do documento (quando disponível)
 - **`index`**: Posição no corpus (para busca léxica)
-- **`score`**: Pontuação de similaridade (0.0 a 1.0, onde 1.0 = idêntico)
+- **`similarity`**: Pontuação de similaridade de cosseno (0.0 a 1.0, onde 1.0 = idêntico)
 - **`text`**: Conteúdo do documento similar encontrado
 
 ## Testes
@@ -192,12 +188,12 @@ data/                     # Corpus de textos
 qdrant_data/             # Dados do Qdrant
 ```
 
-## 🔍 Funcionalidades Implementadas
+## Funcionalidades Implementadas
 
 ✅ **API REST com FastAPI**  
 ✅ **Análise Léxica com TF-IDF**  
-✅ **Análise Semântica com Embeddings**  
-✅ **Busca Híbrida (Dense + Sparse)**  
+✅ **Análise Semântica com Embeddings (all-MiniLM-L6-v2)**  
+✅ **Busca Híbrida (all-MiniLM-L6-v2 + BM25)**  
 ✅ **Indexação Automática com Qdrant**  
 ✅ **Dockerização Completa**  
 ✅ **Health Check**  
@@ -205,15 +201,6 @@ qdrant_data/             # Dados do Qdrant
 ✅ **Tratamento de Erros**  
 ✅ **Validação de Entrada**  
 
-## Cobertura Completa de Cenários
-
-O sistema foi projetado para detectar **todos os tipos de plágio**:
-
-- **Plágio Direto**: Cópias literais de texto
-- **Plágio Parafraseado**: Texto reescrito com palavras diferentes
-- **Plágio Misto**: Combinações de cópia e reescrita
-- **Similaridade Parcial**: Trechos similares em textos diferentes
-- **Plágio de Estrutura**: Organização similar de ideias
 
 ## Otimizações Implementadas
 

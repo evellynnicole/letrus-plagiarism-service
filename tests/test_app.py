@@ -18,7 +18,7 @@ def test_compare_endpoint():
     with patch("app.api.compare.CompareService") as MockCls:
         MockCls.return_value.compare.return_value = {
             "mode": "all",
-            "matches": [{"score": 0.9, "text": "teste"}],
+            "matches": [{"similarity": 0.9, "text": "teste"}],
         }
         r = client.post("/compare", json={"text": "teste"})
         assert r.status_code == 200
