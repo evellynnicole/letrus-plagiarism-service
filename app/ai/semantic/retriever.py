@@ -107,4 +107,5 @@ class Retriever:
                     "text": (p.payload or {}).get("text"),
                 }
             )
+        results.sort(key=lambda x: x["similarity"], reverse=True)
         return results
