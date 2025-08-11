@@ -1,4 +1,4 @@
-# Letrus Plagiarism 
+# Letrus Plagiarism Service
 
 Um serviço de detecção de plágio que combina abordagens léxicas e semânticas para identificar similaridades entre textos em português.
 
