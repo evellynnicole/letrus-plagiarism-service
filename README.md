@@ -1,222 +1,245 @@
-# Letrus Plagiarism Service
+# Letrus Plagiarism 
 
-Serviço de comparação/similaridade textual para detecção de plágio, com três estratégias:
+Um serviço de detecção de plágio que combina abordagens léxicas e semânticas para identificar similaridades entre textos em português.
 
-- **Léxico (TF‑IDF)**: Análise baseada em frequência de termos, rápida e eficiente para detecção de cópia direta
-- **Semântico (embeddings densos)**: Compreensão semântica via Sentence Transformers, captura similaridade conceitual
-- **Híbrido (fusão RRF)**: Combina o melhor dos dois mundos - precisão semântica + robustez lexical
+## Sobre o Projeto
 
-A API é construída com FastAPI e exposta em `/docs`.
+Este projeto implementa um sistema **completo de detecção de plágio** que oferece **todas as estratégias** de análise:
 
-## Sumário
-- [Arquitetura](#arquitetura)
-- [Requisitos](#requisitos)
-- [Execução com Docker Compose (recomendado)](#execução-com-docker-compose-recomendado)
-- [Execução local (sem Docker)](#execução-local-sem-docker)
-- [Uso da API](#uso-da-api)
-- [Testes](#testes)
-- [Configuração](#configuração)
-- [Estrutura do projeto](#estrutura-do-projeto)
-- [Solução de problemas](#solução-de-problemas)
+- **Análise Léxica (TF-IDF)**: Identifica similaridades baseadas em palavras e frases exatas
+- **Análise Semântica (Embeddings)**: Captura similaridades de significado e contexto
+- **Busca Híbrida**: Combina ambas as abordagens para máxima precisão
+- **Modo Completo**: Permite executar todas as estratégias simultaneamente
 
+##  Arquitetura da Solução
 
-## Arquitetura
-- `FastAPI` expõe os endpoints (`/health`, `/compare`).
-- Camada de serviço (`CompareService`) orquestra:
-  - **Léxico**: TF‑IDF local com `scikit-learn` - rápido e eficiente para detecção de cópia direta
-  - **Semântico**: Qdrant como vetor DB com embeddings densos via Sentence Transformers
-  - **Híbrido**: Fusão RRF (Reciprocal Rank Fusion) entre denso e esparso (BM25) - combina precisão semântica com robustez lexical
-- `scripts/indexer.py` cria/garante coleções no Qdrant e indexa o corpus.
-- `scripts/download_data.py` baixa um subconjunto do Wikipedia PT e salva em `data/raw`.
+### Por que Múltiplas Abordagens?
 
-### Por que a estratégia híbrida?
+A solução implementa **todas as estratégias** de detecção de plágio para cobrir todos os cenários possíveis:
 
-A estratégia híbrida combina as vantagens de ambas as abordagens:
-- **Léxico (TF-IDF)**: Excelente para detectar cópias diretas, paráfrases e reordenações de frases
-- **Semântico (embeddings)**: Captura similaridade conceitual mesmo quando as palavras são diferentes
-- **Fusão RRF**: Combina os rankings de ambas as estratégias de forma inteligente, priorizando documentos que aparecem bem posicionados em ambas as listas
+1. **Análise Léxica (TF-IDF)**: Detecta plágio direto, cópias literais e similaridades baseadas em palavras
+2. **Análise Semântica (Embeddings)**: Captura plágio parafraseado, reescrito e similaridades de significado
+3. **Busca Híbrida**: Combina ambas as abordagens para máxima precisão e cobertura
+4. **Modo "All"**: Permite comparar todas as estratégias simultaneamente
 
-Esta abordagem é especialmente eficaz para detecção de plágio em português, onde variações linguísticas e sinônimos são comuns.
+### Componentes Principais
 
+- **FastAPI**: API REST para exposição dos serviços
+- **Qdrant**: Banco de dados vetorial para armazenamento e busca de embeddings
+- **FastEmbed**: Geração de embeddings densos (substituindo sentence-transformers)
+- **Scikit-learn**: Implementação do TF-IDF para análise léxica
 
-## Requisitos
-- Python 3.12+
-- Docker e Docker Compose (para semântico/híbrido e execução completa)
+## Como Executar
 
+### Pré-requisitos
 
-## Execução com Docker Compose (recomendado)
-Este é o caminho mais simples para subir tudo (Qdrant + indexação + API).
+- Docker e Docker Compose
+- Python 3.8+
 
-**⚠️ Importante**: Na primeira execução, o serviço pode demorar alguns minutos para subir devido ao download dos modelos de linguagem (Sentence Transformers). Este é um processo único - nas próximas execuções será muito mais rápido.
+### 1. Clone o Repositório
 
-**📁 Pré-requisito**: Certifique-se de que o arquivo `data/raw/wikipedia-PT-300.jsonl` existe no projeto. Este arquivo contém o corpus que será indexado no Qdrant.
-
-1) Subir os serviços:
-   ```bash
-   docker compose up --build
-   ```
-
-   O fluxo será:
-   - `qdrant` sobe e fica disponível em `localhost:6333`.
-   - `indexer` espera o `qdrant` estar saudável e indexa o corpus nas coleções configuradas.
-   - `api` inicia após o `indexer` concluir com sucesso, expondo a API em `http://localhost:8000`.
-
-   **⏱️ Tempo de inicialização**: Na primeira execução, pode levar demorar devido ao download dos modelos de linguagem. Nas próximas execuções será muito mais rápido.
-
-2) Acesse a documentação interativa em:
-   - `http://localhost:8000/docs`
-   - `http://localhost:8000/redoc`
-
-
-## Execução local (sem Docker)
-Você pode rodar a API localmente para testar o modo léxico (TF‑IDF) sem Qdrant. Para semântico/híbrido, prefira o Docker Compose.
-
-**⚠️ Nota**: Para usar estratégias semânticas/híbridas localmente, você precisará ajustar a configuração do Qdrant para `localhost:6333` em vez de `http://qdrant:6333`.
-
-**📁 Pré-requisito**: Certifique-se de que o arquivo `data/raw/wikipedia-PT-300.jsonl` existe no projeto.
-
-1) Ambiente e dependências:
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+git clone <url-do-repositorio>
+cd letrus-plagiarism-service
 ```
 
-2) Rodar a API (atenção: sem Qdrant, use `mode=lexical` nos requests):
+### 2. Executar com Docker Compose
+
+**Recomendado**: Use Docker Compose para execução mais simples:
+
 ```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+docker-compose up --build
 ```
 
+**Se você usar Docker Compose, não precisa alterar nenhuma configuração!**
+
+O sistema irá:
+1. Iniciar o Qdrant na porta 6333
+2. Executar o indexador para criar os índices
+3. Iniciar a API na porta 8000
+
+### 3. Acessar a API
+
+- **Documentação**: http://localhost:8000/docs
+- **Health Check**: http://localhost:8000/health
+- **Endpoint Principal**: POST http://localhost:8000/compare
+- **Dashboard Qdrant**: http://localhost:6333/dashboard
+
+## Configurações e Escolhas Técnicas
+
+### Por que não usar variáveis de ambiente?
+
+Optei por não usar variáveis de ambiente para **facilitar o desenvolvimento e demonstração**. Em um ambiente de produção, seria recomendado usar.
+
+
+### Configuração para Execução Local
+
+Se você quiser executar **fora do Docker**, precisará alterar a URL do Qdrant no arquivo `app/config/config.py`:
+
+```python
+# Linha 3 do arquivo app/config/config.py
+self.qdrant_url = "http://localhost:6333"  # Altere de "http://qdrant:6333" para "http://localhost:6333"
+```
+
+### Por que FastEmbed ao invés de sentence-transformers?
+
+A escolha pelo **FastEmbed** foi baseada em:
+
+1. **Performance**: Mais rápido para inferência
+2. **Memória**: Menor uso de RAM
+3. **Simplicidade**: API mais simples e direta
+4. **Compatibilidade**: Funciona bem com o Qdrant
+
+```python
+# Antes (sentence-transformers):
+from sentence_transformers import SentenceTransformer
+model = SentenceTransformer('all-MiniLM-L6-v2')
+embeddings = model.encode([text])
+
+# Agora (FastEmbed):
+from fastembed import TextEmbedding
+model = TextEmbedding('sentence-transformers/all-MiniLM-L6-v2')
+embeddings = list(model.embed([text]))
+```
 
 ## Uso da API
-### Healthcheck
+
+### Exemplo de Requisição
+
 ```bash
-curl -s http://localhost:8000/health
+curl -X POST "http://localhost:8000/compare" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "text": "Texto para comparar",
+       "mode": "all",
+       "top_k": 1
+     }'
 ```
 
-### Comparação (POST /compare)
-Body:
-```json
-{
-  "text": "Seu trecho aqui",
-  "top_k": 5,
-  "mode": "all" // "lexical" | "semantic" | "hybrid" | "all"
-}
-```
+### Modos de Comparação
 
-Exemplos:
-- Léxico (não requer Qdrant):
-  ```bash
-  curl -s -X POST http://localhost:8000/compare \
-    -H 'Content-Type: application/json' \
-    -d '{"text": "A linguagem Python é...", "top_k": 5, "mode": "lexical"}' | jq
-  ```
+- **`lexical`**: Análise TF-IDF para plágio direto e cópias literais
+- **`semantic`**: Embeddings densos para plágio parafraseado e similaridades semânticas
+- **`hybrid`**: Combinação otimizada de ambas as abordagens
+- **`all`**: Executa todas as estratégias para cobertura completa
 
-- Semântico (requer Qdrant ativo e corpus indexado):
-  ```bash
-  curl -s -X POST http://localhost:8000/compare \
-    -H 'Content-Type: application/json' \
-    -d '{"text": "A linguagem Python é...", "top_k": 5, "mode": "semantic"}' | jq
-  ```
+### Estrutura da Resposta
 
-- Híbrido (requer Qdrant):
-  ```bash
-  curl -s -X POST http://localhost:8000/compare \
-    -H 'Content-Type: application/json' \
-    -d '{"text": "A linguagem Python é...", "top_k": 5, "mode": "hybrid"}' | jq
-  ```
+A API retorna um objeto `CompareResponse` com os seguintes campos:
 
-- Todas as estratégias (requer Qdrant):
-  ```bash
-  curl -s -X POST http://localhost:8000/compare \
-    -H 'Content-Type: application/json' \
-    -d '{"text": "A linguagem Python é...", "top_k": 5, "mode": "all"}' | jq
-  ```
-
-Respostas seguem o schema:
 ```json
 {
   "mode": "all",
-  "lexical": [{"index": 123, "score": 0.78, "text": "..."}],
-  "semantic": [{"id": "...", "score": 0.82, "text": "..."}],
-  "hybrid": [{"id": "...", "score": 0.86, "text": "..."}]
+  "lexical": [
+    {
+      "index": 42,
+      "score": 0.85,
+      "text": "Texto similar encontrado via TF-IDF"
+    }
+  ],
+  "semantic": [
+    {
+      "id": "doc_123",
+      "score": 0.92,
+      "text": "Texto similar encontrado via embeddings"
+    }
+  ],
+  "hybrid": [
+    {
+      "id": "doc_456",
+      "score": 0.95,
+      "text": "Texto similar encontrado via busca híbrida"
+    }
+  ]
 }
 ```
 
+**Campos de cada item:**
+- **`id`**: Identificador único do documento (quando disponível)
+- **`index`**: Posição no corpus (para busca léxica)
+- **`score`**: Pontuação de similaridade (0.0 a 1.0, onde 1.0 = idêntico)
+- **`text`**: Conteúdo do documento similar encontrado
 
 ## Testes
-Rodar localmente:
+
 ```bash
-pytest -q
+# Executar testes
+pytest
+
+# Com cobertura
+pytest --cov=app
 ```
 
-Observações:
-- Para que os testes que exercitam o endpoint `/compare` passem em modo padrão (`mode=all`), é necessário que:
-  1) O dataset exista em `data/raw/wikipedia-PT-300.jsonl` (rode `python -m scripts.download_data`).
-  2) O Qdrant esteja rodando e as coleções estejam indexadas (use `docker compose up` antes de executar os testes).
+## 📁 Estrutura do Projeto
 
-
-## Configuração
-As configurações padrão estão em `app/config/config.py`:
-
-- `qdrant_url`: URL do Qdrant 
-  - **Docker Compose**: `http://qdrant:6333` (padrão)
-  - **Execução local**: `http://localhost:6333` (ajuste necessário)
-- `model_dense_name`: Modelo de embeddings densos (Sentence Transformers).
-- `model_sparse_name`: Modelo esparso (BM25 via Qdrant).
-- `dense_name` / `sparse_name`: nomes dos espaços vetoriais nas coleções.
-- `qdrant_collection_hybrid` / `qdrant_collection_dense`: nomes das coleções.
-- `data_path`: caminho do JSONL com o corpus (padrão: `data/raw/wikipedia-PT-300.jsonl`).
-
-**⚠️ Para execução local**: Se você quiser usar estratégias semânticas/híbridas sem Docker, altere `qdrant_url` para `http://localhost:6333` no arquivo de configuração.
-
-Sugestão futura: externalizar essas configurações via variáveis de ambiente.
-
-
-## Estrutura do projeto
 ```
 app/
-  ai/
-    lexical/tfidf.py           # Similaridade TF‑IDF
-    semantic/indexer.py        # Criação/garantia de coleções e upsert no Qdrant
-    semantic/retriever.py      # Buscas dense-only e híbridas (RRF)
-  api/compare.py               # Rotas FastAPI
-  services/compare_service.py  # Orquestra léxico/semântico
-  schema/compare.py            # Pydantic models
-  utils/json_utils.py          # Leitura de JSONL
-  main.py                      # Criação do app FastAPI
+├── api/                    # Endpoints da API
+│   └── compare.py         # Endpoint principal de comparação
+├── services/              # Lógica de negócio
+│   └── compare_service.py # Orquestrador dos serviços
+├── ai/                    # Implementações de IA
+│   ├── lexical/          # TF-IDF
+│   └── semantic/         # Embeddings e busca vetorial
+├── config/               # Configurações
+└── utils/                # Utilitários
 
 scripts/
-  download_data.py             # Baixa Wikipedia PT (amostras)
-  indexer.py                   # Indexa no Qdrant
+├── indexer.py            # Script de indexação
+└── download_data.py      # Download do corpus
 
-docker-compose.yml             # Orquestra qdrant + indexer + api
-Dockerfile                     # Imagem da API
-tests/                         # Testes básicos de rota
+data/                     # Corpus de textos
+qdrant_data/             # Dados do Qdrant
 ```
 
+## 🔍 Funcionalidades Implementadas
 
-## Solução de problemas
-- Erro: `Nenhum texto encontrado em data/raw/wikipedia-PT-300.jsonl`
-  - Certifique-se de que o arquivo `data/raw/wikipedia-PT-300.jsonl` existe no projeto.
+✅ **API REST com FastAPI**  
+✅ **Análise Léxica com TF-IDF**  
+✅ **Análise Semântica com Embeddings**  
+✅ **Busca Híbrida (Dense + Sparse)**  
+✅ **Indexação Automática com Qdrant**  
+✅ **Dockerização Completa**  
+✅ **Health Check**  
+✅ **Documentação Automática (Swagger/ReDoc)**  
+✅ **Tratamento de Erros**  
+✅ **Validação de Entrada**  
 
-- Erro de conexão com Qdrant ao usar `semantic`/`hybrid`/`all`:
-  - Garanta que o Qdrant está rodando (no Compose, ele sobe automaticamente) e que as coleções foram criadas/indexadas pelo `indexer`.
-  - **Para execução local**: Verifique se a URL do Qdrant está configurada como `http://localhost:6333`.
+## Cobertura Completa de Cenários
 
-- **Modelos levam muito tempo para baixar na primeira execução**:
-  - É esperado para o `SentenceTransformer` (pode levar 3-5 minutos na primeira vez).
-  - O cache é reutilizado nas próximas execuções do container/host.
-  - Este é um processo único - nas próximas execuções será muito mais rápido.
+O sistema foi projetado para detectar **todos os tipos de plágio**:
 
-- Execução local sem Docker não encontra Qdrant:
-  - Prefira usar `mode=lexical` ou suba tudo via Docker Compose.
-  - **Alternativa**: Se você tiver Qdrant rodando localmente, ajuste a configuração para `http://localhost:6333`.
+- **Plágio Direto**: Cópias literais de texto
+- **Plágio Parafraseado**: Texto reescrito com palavras diferentes
+- **Plágio Misto**: Combinações de cópia e reescrita
+- **Similaridade Parcial**: Trechos similares em textos diferentes
+- **Plágio de Estrutura**: Organização similar de ideias
 
-- **Serviço demora para subir**:
-  - Na primeira execução, é normal demorar alguns minutos devido ao download dos modelos.
-  - Verifique os logs do container para acompanhar o progresso.
-  - Nas próximas execuções será muito mais rápido.
+## Otimizações Implementadas
 
+### Sistema de Hash 
+
+O indexador implementa uma **abordagem de hash SHA-1** para otimizar a reindexação.
+
+**Benefícios:**
+- **Reindexação Inteligente**: Só reindexa documentos que realmente mudaram
+- **Performance**: Evita reprocessar textos idênticos
+- **Eficiência**: Compara hashes antes de fazer upsert no Qdrant
+- **Idempotência**: Pode ser executado múltiplas vezes sem duplicar dados
+
+
+## Referências
+
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- [Qdrant Documentation](https://qdrant.tech/documentation/)
+- [FastEmbed Documentation](https://github.com/qdrant/fastembed)
+- [Scikit-learn TF-IDF](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html)
+
+## Contribuição
+
+Este projeto foi desenvolvido como parte de um case técnico para a Letrus.
+
+**Desenvolvedora:** [evellynnicole](https://github.com/evellynnicole)
 
 ---
-Feito para o desafio técnico. Qualquer dúvida, verifique `/docs` e os arquivos em `app/` e `scripts/`.
+
