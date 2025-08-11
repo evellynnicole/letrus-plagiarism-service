@@ -10,24 +10,12 @@ Um serviço de detecção de plágio que combina abordagens léxicas e semântic
 - **Busca Híbrida**: Combina ambas as abordagens para máxima precisão
 - **Modo Completo**: Permite executar todas as estratégias simultaneamente
 
-
-### Por que Múltiplas Abordagens?
-
-A solução implementa **todas as estratégias** de detecção de plágio para cobrir todos os cenários possíveis:
-
-1. **Análise Léxica (TF-IDF)**: Detecta plágio direto, cópias literais e similaridades baseadas em palavras
-2. **Análise Semântica (Embeddings)**: Captura plágio parafraseado, reescrito e similaridades de significado usando o modelo `sentence-transformers/all-MiniLM-L6-v2`
-3. **Busca Híbrida**: Combina embeddings densos (all-MiniLM-L6-v2) com BM25 (vetor esparso) para máxima precisão e cobertura
-4. **Modo "All"**: Permite comparar todas as estratégias simultaneamente
-
 ### Como Funciona a Busca Híbrida
 
 A busca híbrida usa **RRF (Reciprocal Rank Fusion)** para combinar resultados de duas abordagens:
 
 1. **Fusão RRF**: Combina rankings de embeddings densos (semântica) + BM25 (léxica) para ordenar candidatos
-2. **Similaridade Final**: Refina os melhores candidatos obtendo o **score de cosseno oficial** do Qdrant
-
-**Resultado**: Cobertura completa (dense + sparse) com precisão garantida (sempre cosseno real).
+2. **Similaridade Final**: Refina os melhores candidatos obtendo a similaridade de cosseno.
 
 ### Componentes Principais
 
