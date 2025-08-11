@@ -1,8 +1,8 @@
 # app/ai/semantic/retriever.py
 from typing import Any, Dict, List
 
-from qdrant_client import QdrantClient, models
 from fastembed import TextEmbedding
+from qdrant_client import QdrantClient, models
 
 from app.config.config import Config
 

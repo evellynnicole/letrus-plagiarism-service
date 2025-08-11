@@ -1,6 +1,12 @@
+from unittest.mock import Mock
+
 import pytest
-from unittest.mock import Mock, patch
+
 from app.services.compare_service import CompareService
+
+HTTP_OK = 200
+EXPECTED_SCORE = 0.9
+
 
 @pytest.fixture
 def mock_service():
@@ -11,23 +17,27 @@ def mock_service():
     service.compare_hybrid.return_value = [{"id": "doc1", "score": 0.85, "text": "teste"}]
     return service
 
+
 def test_compare_lexical(mock_service):
     """Testa comparação lexical"""
     result = mock_service.compare_lexical("texto", top_k=3)
-    assert len(result) == 1
-    assert result[0]["score"] == 0.9
+    assert len(result) == HTTP_OK
+    assert result[0]["score"] == EXPECTED_SCORE
+
 
 def test_compare_semantic(mock_service):
     """Testa comparação semântica"""
     result = mock_service.compare_semantic("texto", top_k=3)
-    assert len(result) == 1
+    assert len(result) == HTTP_OK
     assert result[0]["id"] == "doc1"
+
 
 def test_compare_hybrid(mock_service):
     """Testa comparação híbrida"""
     result = mock_service.compare_hybrid("texto", top_k=3)
-    assert len(result) == 1
-    assert result[0]["score"] == 0.85
+    assert len(result) == HTTP_OK
+    assert result[0]["score"] == EXPECTED_SCORE
+
 
 def test_compare_all_modes(mock_service):
     """Testa todos os modos de comparação"""

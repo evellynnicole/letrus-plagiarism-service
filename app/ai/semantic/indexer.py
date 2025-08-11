@@ -40,7 +40,8 @@ class Indexer:
         """Calcula o hash SHA1 de um texto."""
         return hashlib.sha1(text.encode("utf-8")).hexdigest()
 
-    def dense_dim(self) -> int:
+    @staticmethod
+    def dense_dim() -> int:
         """Retorna a dimensão do embedding do modelo denso."""
         return 384
 
