@@ -173,7 +173,6 @@ scripts/
 └── download_data.py      # Download do corpus
 
 data/                     # Corpus de textos
-qdrant_data/             # Dados do Qdrant
 ```
 
 ## Funcionalidades Implementadas
