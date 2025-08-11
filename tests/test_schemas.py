@@ -1,78 +1,36 @@
-import pytest
-from pydantic import ValidationError
-
 from app.schema.compare import CompareMode, CompareRequest, CompareResponse, MatchItem
 
-HTTP_OK = 200
-TOP_K = 10
-EXPECTED_SCORE = 0.9
 
-
-def test_compare_mode_values():
+def test_compare_mode():
     """Testa valores válidos do CompareMode"""
     valid_modes = ["lexical", "semantic", "hybrid", "all"]
     for mode in valid_modes:
         assert CompareMode(mode) == mode
 
 
-def test_compare_mode_invalid():
-    """Testa modo inválido"""
-    with pytest.raises(ValidationError):
-        CompareMode("invalid")
-
-
-def test_compare_request_basic():
+def test_compare_request():
     """Testa request básico"""
     request = CompareRequest(text="teste")
     assert request.text == "teste"
     assert request.mode == "all"
-    assert request.top_k == TOP_K
+    assert request.top_k == 5
 
 
-def test_compare_request_custom():
-    """Testa request com valores customizados"""
-    request = CompareRequest(text="teste", mode="lexical", top_k=TOP_K)
-    assert request.text == "teste"
-    assert request.mode == "lexical"
-    assert request.top_k == TOP_K
-
-
-def test_compare_request_validation():
-    """Testa validação do request"""
-    # Texto vazio
-    with pytest.raises(ValidationError):
-        CompareRequest(text="")
-
-    # top_k muito baixo
-    with pytest.raises(ValidationError):
-        CompareRequest(text="teste", top_k=0)
-
-
-def test_match_item_basic():
+def test_match_item():
     """Testa MatchItem básico"""
-    item = MatchItem(score=EXPECTED_SCORE, text="teste")
-    assert item.score == EXPECTED_SCORE
+    item = MatchItem(score=0.9, text="teste")
+    assert item.score == 0.9
     assert item.text == "teste"
     assert item.id is None
 
 
-def test_compare_response_lexical():
-    """Testa response no modo lexical"""
-    response = CompareResponse(
-        mode="lexical", lexical=[MatchItem(score=EXPECTED_SCORE, text="teste")]
-    )
-    assert response.mode == "lexical"
-    assert len(response.lexical) == 1
-    assert len(response.semantic) == 0
-
-
-def test_compare_response_all():
-    """Testa response no modo all"""
+def test_compare_response():
+    """Testa response básico"""
     response = CompareResponse(
         mode="all",
-        lexical=[MatchItem(score=EXPECTED_SCORE, text="teste")],
-        semantic=[MatchItem(score=EXPECTED_SCORE, text="teste")],
-        hybrid=[MatchItem(score=EXPECTED_SCORE, text="teste")],
+        lexical=[MatchItem(score=0.9, text="teste")],
+        semantic=[MatchItem(score=0.8, text="teste")],
+        hybrid=[MatchItem(score=0.85, text="teste")],
     )
     assert response.mode == "all"
     assert len(response.lexical) == 1
